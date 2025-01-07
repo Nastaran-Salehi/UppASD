@@ -103,10 +103,15 @@ contains
                   bcount_skyno,delta_t,real_time_measure)
             endif
 
+         else if (skyno=='D') then
+         ! Wite the total skyrmion number to the buffer
+         call buffer_skyno3d(Natom, Mensemble, N1, N2, mstep-1, emomM, emom,            &
+               bcount_skyno, delta_t, real_time_measure)
+
          end if
 
 
-         if (skyno=='Y'.or.skyno=='T') then
+         if (skyno=='Y'.or.skyno=='T'.or.skyno=='D') then
             if (bcount_skyno==skyno_buff) then
                ! Print the buffer total skyrmion number to file
                call prn_skyno(simid,real_time_measure)
@@ -155,7 +160,7 @@ contains
       if (flag>0) then
 
          bcount_skyno=1
-         if (skyno=='Y'.or.skyno=='T') then
+         if (skyno=='Y'.or.skyno=='T'.or.skyno=='D') then
             allocate(skynob(skyno_buff),stat=i_stat)
             call memocc(i_stat,product(shape(skynob))*kind(skynob),'skynob','allocate_topology')
             skynob=0.0_dblprec
@@ -190,7 +195,7 @@ contains
 
       else
 
-         if (skyno=='Y'.or.skyno=='T') then
+         if (skyno=='Y'.or.skyno=='T'.or.skyno=='D') then
             i_all=-product(shape(skynob))*kind(skynob)
             deallocate(skynob,stat=i_stat)
             call memocc(i_stat,i_all,'skynob','allocate_topology')
@@ -265,7 +270,7 @@ contains
       character(len=1), intent(in) :: real_time_measure  !< Measurements displayed in real time
 
       ! Skyrmion number
-      if (skyno=='Y'.or.skyno=='T') then
+      if (skyno=='Y'.or.skyno=='T'.or.skyno=='D') then
          bcount_skyno=bcount_skyno-1
          ! Write the total skyrmion number buffer to file
          call prn_skyno(simid,real_time_measure)
@@ -343,9 +348,9 @@ contains
 
       write(*,*) "Error writing the skyrmion number file"
 
-      240 format(i8,2x,5f16.8)
-      241 format(es16.6,2x,5f16.8)
-      246 format(a8,2x,a10,2x,a10,2x,a10)
+      240 format(i8,2x,5f13.6)
+      241 format(es13.6,2x,5f13.6)
+      246 format(a8,3x,a10,3x,a10,3x,a10)
       247 format(a16,2x,a10,2x,a10,2x,a10)
 
    end subroutine prn_skyno
@@ -557,6 +562,42 @@ contains
       endif
 
    end subroutine buffer_skyno
+
+   !---------------------------------------------------------------------------------
+   ! SUBROUTINE buffer_skyno3d
+   !> Buffer the skyrmion number
+   !> @author
+   !> Nastaran Salehi
+   !---------------------------------------------------------------------------------
+      subroutine buffer_skyno3d(Natom, Mensemble,N1,N2,mstep,emomM,emom,bcount_skyno,           &
+                delta_t,real_time_measure)
+      !
+      use Gradients
+      use Topology
+
+      implicit none
+
+      integer, intent(in) :: N1    !< Number of cell repetitions in x direction
+      integer, intent(in) :: N2    !< Number of cell repetitions in y direction
+      integer, intent(in) :: mstep !< Current simulation step
+      integer, intent(in) :: Natom !< Number of atoms in system
+      integer, intent(in) :: Mensemble     !< Number of ensembles
+      integer, intent(in) :: bcount_skyno  !< Counter of buffer for skyrmion number
+      real(dblprec), intent(in) :: delta_t !< Current time step
+      real(dblprec), dimension(3,Natom,Mensemble), intent(in) :: emom   !< Current unit moment vector
+      real(dblprec), dimension(3,Natom,Mensemble), intent(in) :: emomM  !< Current moment vector
+      character(len=1), intent(in) :: real_time_measure !< Measurements displayed in real time
+
+      call grad_moments(Natom, Mensemble,emom, grad_mom)
+      skynob(bcount_skyno)=pontryagin_no3d(Natom, Mensemble,emomM, grad_mom)
+
+      if (real_time_measure=='Y') then
+         indxb_skyno(bcount_skyno)=nint(real(mstep,dblprec)*delta_t)
+      else
+         indxb_skyno(bcount_skyno)=mstep
+      endif
+
+   end subroutine buffer_skyno3d
 
    !---------------------------------------------------------------------------------
    ! SUBROUTINE buffer_proj_skyno  
