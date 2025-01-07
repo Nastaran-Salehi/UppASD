@@ -46,7 +46,7 @@ module Configuration
 
 
   private
-  public MultiscaleOptions, readMultiscaleOptions, deallocateOptions
+  public MultiscaleOptions, readMultiscaleOptions, deallocateOptions, allocateOptions
 
   type(InputFields) :: fields
 contains
