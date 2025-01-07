@@ -22,6 +22,8 @@ module Gradients
    use Parameters
    use Profiling
    use InputData, only: do_multiscale
+   use Configuration, only: MultiscaleOptions,readMultiscaleOptions, &
+         deallocateOptions
 
    implicit none
    real(dblprec), dimension(:,:,:), allocatable :: dxyz_vec
@@ -40,7 +42,7 @@ contains
    !> Find nearest neighbours in 3D stencil shape. Used for discrete differentiation.
    !---------------------------------------------------------------------------------
    subroutine setup_stencil_mesh(Natom, N1, N2, N3, C1, C2, C3, BC1, BC2, BC3,      &
-         max_no_neigh, nlistsize, nlist, coord)
+         max_no_neigh, nlistsize, nlist, coord, config_file)
 
       implicit none
 
@@ -58,15 +60,19 @@ contains
       real(dblprec), dimension(3), intent(in) :: C2 !< Second lattice vector
       real(dblprec), dimension(3), intent(in) :: C3 !< Third lattice vector
       real(dblprec), dimension(3,Natom), intent(in) :: coord !< Coordinates of atoms
+      character(len=*), intent(in) :: config_file
 
       ! .. Local variables
-      real(dblprec), parameter :: rcutoff=1.05_dblprec
+      type(MultiscaleOptions)  :: options
 
+      real(dblprec), dimension(:,:,:),allocatable  :: temp_dxyz_vec
+      integer,       dimension(:,:),  allocatable  :: temp_dxyz_atom
+      real(dblprec), parameter :: delta=0.05_dblprec
       integer :: iatom, jneigh, jatom, ix, iy, iz, icount
-      integer :: i_stat
+      integer :: i_stat, current_size
       integer :: signx, signy, signz
       integer :: perx, pery, perz
-      real(dblprec) :: jnorm, jpnorm, jtnorm
+      real(dblprec) :: jnorm, jpnorm, jtnorm, a1, a2, a3
       real(dblprec), dimension(3) :: icoord, jcoord, jpcoord, jtcoord
       real(dblprec), dimension(3,-1:1,-1:1,-1:1) :: minmat_coord
       real(dblprec), dimension(-1:1,-1:1,-1:1) :: minmat_norm
@@ -78,16 +84,13 @@ contains
          call memocc(i_stat,product(shape(dxyz_list))*kind(dxyz_list),'dxyz_list','setup_stencil_mesh')
          dxyz_list=0
       endif
-      if (.not.allocated(dxyz_atom)) then
-         allocate(dxyz_atom(26,Natom),stat=i_stat)
-         call memocc(i_stat,product(shape(dxyz_atom))*kind(dxyz_atom),'dxyz_atom','setup_stencil_mesh')
-         dxyz_atom=0
-      endif
-      if (.not.allocated(dxyz_vec)) then
-         allocate(dxyz_vec(3,26,Natom),stat=i_stat)
-         call memocc(i_stat,product(shape(dxyz_vec))*kind(dxyz_vec),'dxyz_vec','setup_stencil_mesh')
-         dxyz_vec=0.0_dblprec
-      endif
+      
+      ! Initialize  dxyz_atom and dxyz_vec
+      dxyz_atom=0
+      dxyz_vec=0.0_dblprec
+
+      ! Initialize current size
+      current_size=0
 
       ! Prepare for periodic boundaries
       if(BC1=='P') then
@@ -106,12 +109,19 @@ contains
          perz=0
       end if
 
+      call readMultiscaleOptions(trim(adjustl(config_file)),options)
+      call deallocateOptions(options)
+      !Define the Delta_a
+      a1=nint((options%space%universeSize(1)/options%finiteDiffBoxes(1)))+delta
+      a2=nint((options%space%universeSize(2)/options%finiteDiffBoxes(2)))+delta
+      a3=nint((options%space%universeSize(3)/options%finiteDiffBoxes(3)))+delta
+
       ! Loop over atoms
       do iatom=1, Natom
          icoord=coord(1:3,iatom)
 
          ! Initialize minima matrix with large entries
-         minmat_norm=rcutoff
+         minmat_norm=max(a1,a2,a3)
          minmat_coord=0.0_dblprec
          minmat_atom=0
 
@@ -169,18 +179,49 @@ contains
          end do
 
          ! Make neighbour list
-         icount=0
-         do ix=-1,1
-            do iy=-1,1
-               do iz=-1,1
-                  if(minmat_atom(ix,iy,iz)>0) then
-                     icount=icount+1
-                     dxyz_vec(:,icount,iatom)=minmat_coord(:,ix,iy,iz)
-                     dxyz_atom(icount,iatom)=minmat_atom(ix,iy,iz)
-                  end if
-               end do
-            end do
+         icount = 0
+         do ix = -1, 1
+             do iy = -1, 1
+                 do iz = -1, 1
+                     if (minmat_atom(ix, iy, iz) > 0) then
+                         icount = icount + 1
+                         ! Check if we need to reallocate
+                         if (icount > current_size) then
+                             ! Temporary arrays to hold existing data
+                             if (allocated(dxyz_atom)) then
+                                 allocate(temp_dxyz_atom(size(dxyz_atom,1), size(dxyz_atom,2)))
+                                 temp_dxyz_atom = dxyz_atom
+                                 deallocate(dxyz_atom)
+                             endif
+                             if (allocated(dxyz_vec)) then
+                                 allocate(temp_dxyz_vec(size(dxyz_vec,1), size(dxyz_vec,2), size(dxyz_vec,3)))
+                                 temp_dxyz_vec = dxyz_vec
+                                 deallocate(dxyz_vec)
+                             endif
+                             ! Allocate with new size
+                             allocate(dxyz_atom(icount, Natom), stat = i_stat)
+                             call memocc(i_stat, product(shape(dxyz_atom)) * kind(dxyz_atom), 'dxyz_atom', 'setup_stencil_mesh')
+                             if (allocated(temp_dxyz_atom)) then
+                                 dxyz_atom(:size(temp_dxyz_atom,1), :) = temp_dxyz_atom
+                                 deallocate(temp_dxyz_atom)
+                             endif
+
+                             allocate(dxyz_vec(3, icount, Natom), stat = i_stat)
+                             call memocc(i_stat, product(shape(dxyz_vec)) * kind(dxyz_vec), 'dxyz_vec', 'setup_stencil_mesh')
+                             if (allocated(temp_dxyz_vec)) then
+                                 dxyz_vec(:size(temp_dxyz_vec,2), :, :) = temp_dxyz_vec
+                                 deallocate(temp_dxyz_vec)
+                             endif
+
+                             current_size = icount
+                         endif
+                         dxyz_vec(:, icount, iatom) = minmat_coord(:, ix, iy, iz)
+                         dxyz_atom(icount, iatom) = minmat_atom(ix, iy, iz)
+                     endif
+                 end do
+             end do
          end do
+         
          dxyz_list(iatom)=icount
       end do
 
