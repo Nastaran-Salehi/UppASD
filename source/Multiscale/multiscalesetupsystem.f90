@@ -434,7 +434,7 @@ contains
     deallocate(ammom_inp, stat=i_stat)
     call memocc(i_stat, -isize, 'ammom_inp', 'setup_multiscale_system')
 
-    call setupGradients(setup%gradientLinks, grad_link_file_name, do_prnmultiscale)
+    call setupGradients(setup%gradientLinks, grad_link_file_name, do_prnmultiscale,config_file)
     
     if (ipmode=='MS'.and.do_site_ip_damping=='Y') then
        call read_ip_damping()
@@ -1130,12 +1130,12 @@ contains
     end if
   end subroutine ensureDmSize
   
-  subroutine setupGradients (links, dump_file, dump)   
+  subroutine setupGradients (links, dump_file, dump,config_file)   
     use InputData
     use SystemData, only : coord
     use HamiltonianData, only : ham       !only : max_no_neigh, nlistsize, ncoup, nlist
     use InputHandler !only: read_jvecfile
-    use Prn_Topology, only: skyno, do_proj_skyno
+    use Prn_Topology, only: skyno, do_proj_skyno, do_skyno_den
     use Gradients
     use Spintorques
     use MultiscaleGradients
@@ -1144,6 +1144,7 @@ contains
     type(SpMatrix), intent(in) :: links
     character(len=OUTPUT_FILE_LEN), intent(in) :: dump_file
     logical, intent(in) :: dump
+    character(len=*), intent(in) :: config_file
 
     integer :: i, row, col, i_stat
     real(dblprec) :: val
@@ -1193,12 +1194,10 @@ contains
         call allocate_stt_data(Natom,Mensemble,flag=1)
 
     endif
-    if (skyno=='Y'.or.do_proj_skyno=='Y') then
-       print *,"WARNING: In multiscale mode, skyno and proj_skyno"
-       print *,"         are not tested."
+    if (skyno=='Y'.or. do_proj_skyno=='Y'.or. skyno=='T' .or. do_proj_skyno=='T'.or. do_skyno_den=='Y' .or. skyno=='D' ) then
        call setup_stencil_mesh( &
             Natom, N1, N2, N3, C1, C2, C3, BC1, BC2, BC3, &
-            ham%max_no_neigh, ham%nlistsize, ham%nlist, coord)
+            ham%max_no_neigh, ham%nlistsize, ham%nlist, coord,config_file)
     end if
 
   end subroutine setupGradients
