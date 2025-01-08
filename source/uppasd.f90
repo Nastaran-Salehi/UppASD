@@ -570,7 +570,7 @@ contains
       use MC_Wolff
       use Topology
       use geometry,        only : setup_geometry, rescale_lattvec
-      use gradients        only : setup_stencil_mesh
+      use Gradients,       only : setup_stencil_mesh
       use Stiffness,       only : do_stiffness
       use InputData
       use SystemData
