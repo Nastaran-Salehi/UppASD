@@ -62,11 +62,61 @@ contains
       end do
       !$omp end parallel do
 
-      pontryagin_no=thesum/pi/Mensemble
+      pontryagin_no=-4*thesum/pi/Mensemble
       !
       return
       !
    end function pontryagin_no
+
+   !---------------------------------------------------------------------------------
+   !> @brief
+   !> Calculates the total skyrmion number in 3D
+   !
+   !> @author
+   !> Nastaran Salehi
+   !> Manuel Pereiro
+   !---------------------------------------------------------------------------------
+   real(dblprec) function pontryagin_no3d(Natom,Mensemble,emomM,grad_mom)
+      use Constants
+
+      implicit none
+
+      integer, intent(in) :: Natom !< Number of atoms in system
+      integer, intent(in) :: Mensemble !< Number of ensembles
+      real(dblprec), dimension(3,Natom, Mensemble), intent(in) :: emomM  !< Current magnetic moment vector
+      real(dblprec), dimension(3,3,Natom, Mensemble), intent(in) :: grad_mom  !< Gradient of magnetic moment vector
+
+      integer :: iatom, k
+      real(dblprec) :: thesum,cvec_x_xy,cvec_y_xy,cvec_z_xy,cvec_x_yz,cvec_y_yz,cvec_z_yz,cvec_x_zx,cvec_y_zx,cvec_z_zx
+
+      thesum=0.0_dblprec
+
+      !$omp parallel do default(shared) private(iatom,k,cvec_x_xy,cvec_y_xy,cvec_z_xy,cvec_x_yz,cvec_y_yz,cvec_z_yz,cvec_x_zx,cvec_y_zx,cvec_z_zx) reduction(+:thesum)
+      do iatom=1, Natom
+         do k=1, Mensemble
+            cvec_x_xy=grad_mom(2,1,iatom,k)*grad_mom(3,2,iatom,k)-grad_mom(3,1,iatom,k)*grad_mom(2,2,iatom,k)
+            cvec_y_xy=grad_mom(3,1,iatom,k)*grad_mom(1,2,iatom,k)-grad_mom(1,1,iatom,k)*grad_mom(3,2,iatom,k)
+            cvec_z_xy=grad_mom(1,1,iatom,k)*grad_mom(2,2,iatom,k)-grad_mom(2,1,iatom,k)*grad_mom(1,2,iatom,k)
+
+            cvec_x_yz=grad_mom(2,2,iatom,k)*grad_mom(3,3,iatom,k)-grad_mom(3,2,iatom,k)*grad_mom(2,3,iatom,k)
+            cvec_y_yz=grad_mom(3,2,iatom,k)*grad_mom(1,3,iatom,k)-grad_mom(1,2,iatom,k)*grad_mom(3,3,iatom,k)
+            cvec_z_yz=grad_mom(1,2,iatom,k)*grad_mom(2,3,iatom,k)-grad_mom(2,2,iatom,k)*grad_mom(1,3,iatom,k)
+
+            cvec_x_zx=grad_mom(2,3,iatom,k)*grad_mom(3,1,iatom,k)-grad_mom(3,3,iatom,k)*grad_mom(2,1,iatom,k)
+            cvec_y_zx=grad_mom(3,3,iatom,k)*grad_mom(1,1,iatom,k)-grad_mom(1,3,iatom,k)*grad_mom(3,1,iatom,k)
+            cvec_z_zx=grad_mom(1,3,iatom,k)*grad_mom(2,1,iatom,k)-grad_mom(2,3,iatom,k)*grad_mom(1,1,iatom,k)
+
+            thesum=thesum+emomM(1,iatom,k)*(cvec_x_xy+cvec_x_yz+cvec_x_zx)+emomM(2,iatom,k)*(cvec_y_xy+cvec_y_yz+cvec_y_zx) &
+                   +emomM(3,iatom,k)*(cvec_z_xy+cvec_z_yz+cvec_z_zx)
+         end do
+      end do
+      !$omp end parallel do
+
+      pontryagin_no3d=-thesum/pi/Mensemble
+      !
+      return
+      !
+   end function pontryagin_no3d
 
    !---------------------------------------------------------------------------------
    !> @brief
