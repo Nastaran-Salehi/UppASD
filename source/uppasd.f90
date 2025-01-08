@@ -540,7 +540,7 @@ contains
       if(OPT_ON) then
          call allocateOptimizationStuff(na,natom,Mensemble,.false.)
       end if
-      if (stt/='N'.or.skyno=='Y'.or.do_proj_skyno=='Y') then
+      if (stt/='N'.or.skyno=='Y'.or.do_proj_skyno=='Y'.or.skyno=='D') then
          call deallocate_gradient_lists()
       end if
     endif
@@ -570,7 +570,7 @@ contains
       use MC_Wolff
       use Topology
       use geometry,        only : setup_geometry, rescale_lattvec
-      use gradients
+      use gradients        only : setup_stencil_mesh
       use Stiffness,       only : do_stiffness
       use InputData
       use SystemData
@@ -1256,9 +1256,10 @@ contains
 
          call read_jvecfile(Natom)
 
-         if (stt=='A'.or.(stt/='A'.and.skyno=='Y')) then
+         if (stt=='A'.or.(stt/='A'.and.skyno=='Y'.or.skyno=='D')) then
             call setup_stencil_mesh(Natom,N1,N2,N3,C1,C2,C3,BC1,BC2,BC3,            &
-               ham%max_no_neigh,ham%nlistsize,ham%nlist,coord)
+               ham%max_no_neigh,ham%nlistsize,ham%nlist,coord,multiscale_file_name)
+
          end if
          ! Call to allocate the needed stt data
          call allocate_stt_data(Natom,Mensemble,flag=1)
@@ -1271,9 +1272,9 @@ contains
          if (do_sot/='N') call read_sot_pol_site(Natom)
 
       endif
-      if (stt=='N'.and.(skyno=='Y'.or.do_proj_skyno=='Y')) then
+      if (stt=='N'.and.(skyno=='Y'.or.do_proj_skyno=='Y'.or.skyno=='D')) then
          call setup_stencil_mesh(Natom,N1,N2,N3,C1,C2,C3,BC1,BC2,BC3,               &
-            ham%max_no_neigh,ham%nlistsize,ham%nlist,coord)
+            ham%max_no_neigh,ham%nlistsize,ham%nlist,coord,multiscale_file_name)
       end if
 
       if (skyno=='T') then
