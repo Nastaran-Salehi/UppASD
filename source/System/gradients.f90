@@ -258,6 +258,11 @@ contains
       !$omp parallel do default(shared) private(iatom,k,jneigh,jatom,d_mom_x,dx,d_mom_y,dy,d_mom_z,dz)
       do iatom=1, Natom
          do k=1, Mensemble
+           if (dxyz_list(iatom)==0) then
+            dmomdr(1,iatom,k)=0.0_dblprec
+            dmomdr(2,iatom,k)=0.0_dblprec
+            dmomdr(3,iatom,k)=0.0_dblprec
+           else
             do jneigh=1, dxyz_list(iatom)
                jatom=dxyz_atom(jneigh,iatom)
                d_mom_x=emomM(1,jatom,k)-emomM(1,iatom,k)
@@ -288,7 +293,7 @@ contains
             dmomdr(1,iatom,k)=dmomdr(1,iatom,k)/dxyz_list(iatom)
             dmomdr(2,iatom,k)=dmomdr(2,iatom,k)/dxyz_list(iatom)
             dmomdr(3,iatom,k)=dmomdr(3,iatom,k)/dxyz_list(iatom)
-
+           end if
          end do
       end do
       !$omp end parallel do
@@ -316,6 +321,11 @@ contains
       !$omp parallel do default(shared) private(iatom,kk,jneigh,jatom,d_mom_x,dx,d_mom_y,dy,d_mom_z,dz)
       do iatom=1, Natom
          do kk=1, Mensemble
+           if (dxyz_list(iatom)==0) then
+            grad_mom(1:3,1,iatom,kk)=0.0_dblprec
+            grad_mom(1:3,2,iatom,kk)=0.0_dblprec
+            grad_mom(1:3,3,iatom,kk)=0.0_dblprec
+           else
             do jneigh=1, dxyz_list(iatom)
                jatom=dxyz_atom(jneigh,iatom)
                d_mom_x=emomM(1,jatom,kk)-emomM(1,iatom,kk)
@@ -344,6 +354,7 @@ contains
             grad_mom(1:3,1,iatom,kk)=grad_mom(1:3,1,iatom,kk)/dxyz_list(iatom)
             grad_mom(1:3,2,iatom,kk)=grad_mom(1:3,2,iatom,kk)/dxyz_list(iatom)
             grad_mom(1:3,3,iatom,kk)=grad_mom(1:3,3,iatom,kk)/dxyz_list(iatom)
+           end if
          end do
       end do
       !$omp end parallel do
@@ -372,7 +383,12 @@ contains
       !$omp parallel do default(shared) private(iatom,k,jneigh,jatom,d_mom_x,dx,d_mom_y,dy,d_mom_z,dz,ii)
       do iatom=1, Natom
          do k=1, Mensemble
-            ii=atype(iatom)
+           ii=atype(iatom)
+           if (dxyz_list(iatom)==0) then
+            proj_grad_mom(1:3,1,iatom,k,ii)=0.0_dblprec
+            proj_grad_mom(1:3,2,iatom,k,ii)=0.0_dblprec
+            proj_grad_mom(1:3,3,iatom,k,ii)=0.0_dblprec
+           else
             do jneigh=1, dxyz_list(iatom)
                jatom=dxyz_atom(jneigh,iatom)
                d_mom_x=emomM(1,jatom,k)-emomM(1,iatom,k)
@@ -401,7 +417,7 @@ contains
             proj_grad_mom(1:3,1,iatom,k,ii)=proj_grad_mom(1:3,1,iatom,k,ii)/dxyz_list(iatom)
             proj_grad_mom(1:3,2,iatom,k,ii)=proj_grad_mom(1:3,2,iatom,k,ii)/dxyz_list(iatom)
             proj_grad_mom(1:3,3,iatom,k,ii)=proj_grad_mom(1:3,3,iatom,k,ii)/dxyz_list(iatom)
-
+           end if
          end do
       end do
       !$omp end parallel do
