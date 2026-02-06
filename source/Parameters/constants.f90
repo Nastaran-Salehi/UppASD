@@ -26,5 +26,6 @@ module Constants
    real(dblprec) :: angstrom     = 1.0d-10                   ! m
    real(dblprec) :: a0           = 0.52917721067d-10         ! m
    real(dblprec) :: g_e_abs      = 2.00231930436182
+   real(dblprec) :: a_dpole      = 1.174319d52               !D*4pi/mu0*mub^2
    real(dblprec),parameter :: pi = 3.141592653589793_dblprec
 end module Constants
