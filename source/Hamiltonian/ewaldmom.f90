@@ -71,7 +71,7 @@ contains
       Vinv=1.0_dblprec/(Vol)
 
       ! Factor of mu_0/4*pi
-      fac=1.0d-7*mub/alat**3 ! This factor is setup for the sign of the field
+      fac=1.174319d52*(1.0d-7*mub/alat**3) ! This factor is setup for the sign of the field
 
       call SETUP_QCOORDS_EWALD(N1,N2,N3,KMAX,C1,C2,C3)
 
